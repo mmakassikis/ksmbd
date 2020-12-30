@@ -333,8 +333,6 @@ static int ipc_server_config_on_startup(struct ksmbd_startup_request *req)
 	ret = ksmbd_set_netbios_name(req->netbios_name);
 	ret |= ksmbd_set_server_string(req->server_string);
 	ret |= ksmbd_set_work_group(req->work_group);
-	ret |= ksmbd_tcp_set_interfaces(KSMBD_STARTUP_CONFIG_INTERFACES(req),
-					req->ifc_list_sz);
 	if (ret) {
 		ksmbd_err("Server configuration error: %s %s %s\n",
 				req->netbios_name,

@@ -382,14 +382,6 @@ int ksmbd_conn_transport_init(void)
 	int ret;
 
 	mutex_lock(&init_lock);
-#if 0
-	ret = ksmbd_tcp_init();
-	if (ret) {
-		pr_err("Failed to init TCP subsystem: %d\n", ret);
-		goto out;
-	}
-#endif
-
 	ret = ksmbd_rdma_init();
 	if (ret) {
 		pr_err("Failed to init KSMBD subsystem: %d\n", ret);
@@ -427,7 +419,6 @@ again:
 void ksmbd_conn_transport_destroy(void)
 {
 	mutex_lock(&init_lock);
-	ksmbd_tcp_destroy();
 	ksmbd_rdma_destroy();
 	stop_sessions();
 	mutex_unlock(&init_lock);

@@ -9,8 +9,5 @@
 struct socket;
 
 int ksmbd_tcp_new_connection(struct socket *sock);
-int ksmbd_tcp_set_interfaces(char *ifc_list, int ifc_list_sz);
-int ksmbd_tcp_init(void);
-void ksmbd_tcp_destroy(void);
 
 #endif /* __KSMBD_TRANSPORT_TCP_H__ */
