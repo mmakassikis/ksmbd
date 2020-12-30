@@ -217,7 +217,7 @@ static unsigned short ksmbd_tcp_get_port(const struct sockaddr *sa)
  *
  * Return:	0 on success, otherwise error
  */
-static int ksmbd_tcp_new_connection(struct socket *client_sk)
+int ksmbd_tcp_new_connection(struct socket *client_sk)
 {
 	struct sockaddr *csin;
 	int rc = 0;
