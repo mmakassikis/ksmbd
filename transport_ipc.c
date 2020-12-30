@@ -11,6 +11,7 @@
 #include <linux/hashtable.h>
 #include <net/net_namespace.h>
 #include <net/genetlink.h>
+#include <net/sock.h>
 #include <linux/socket.h>
 #include <linux/workqueue.h>
 
@@ -81,6 +82,7 @@ static int handle_startup_event(struct sk_buff *skb, struct genl_info *info);
 static int handle_unsupported_event(struct sk_buff *skb,
 				    struct genl_info *info);
 static int handle_generic_event(struct sk_buff *skb, struct genl_info *info);
+static int handle_socket_event(struct sk_buff *skb, struct genl_info *info);
 static int ksmbd_ipc_heartbeat_request(void);
 
 static const struct nla_policy ksmbd_nl_policy[KSMBD_EVENT_MAX] = {
@@ -127,6 +129,9 @@ static const struct nla_policy ksmbd_nl_policy[KSMBD_EVENT_MAX] = {
 	[KSMBD_EVENT_SPNEGO_AUTHEN_REQUEST] = {
 	},
 	[KSMBD_EVENT_SPNEGO_AUTHEN_RESPONSE] = {
+	},
+	[KSMBD_EVENT_CLIENT_SOCKET] = {
+		.len = sizeof(struct ksmbd_socket),
 	},
 };
 
@@ -194,6 +199,10 @@ static struct genl_ops ksmbd_genl_ops[] = {
 	{
 		.cmd	= KSMBD_EVENT_SPNEGO_AUTHEN_RESPONSE,
 		.doit	= handle_generic_event,
+	},
+	{
+		.cmd	= KSMBD_EVENT_CLIENT_SOCKET,
+		.doit	= handle_socket_event,
 	},
 };
 
@@ -428,6 +437,55 @@ static int handle_generic_event(struct sk_buff *skb, struct genl_info *info)
 
 	payload = nla_data(info->attrs[info->genlhdr->cmd]);
 	sz = nla_len(info->attrs[info->genlhdr->cmd]);
+	return handle_response(type, payload, sz);
+}
+
+static int handle_socket_event(struct sk_buff *skb, struct genl_info *info)
+{
+	struct ksmbd_socket *payload;
+	int r, sz;
+	int type = info->genlhdr->cmd;
+	struct socket *sock;
+
+#ifdef CONFIG_SMB_SERVER_CHECK_CAP_NET_ADMIN
+	if (!netlink_capable(skb, CAP_NET_ADMIN))
+		return -EPERM;
+#endif
+
+	if (type >= KSMBD_EVENT_MAX) {
+		WARN_ON(1);
+		return -EINVAL;
+	}
+
+	if (!ksmbd_ipc_validate_version(info))
+		return -EINVAL;
+
+	if (!info->attrs[KSMBD_EVENT_CLIENT_SOCKET])
+		return -EINVAL;
+
+	payload = nla_data(info->attrs[info->genlhdr->cmd]);
+	sz = nla_len(info->attrs[info->genlhdr->cmd]);
+
+	if (sz != sizeof(*payload)) {
+		printk(KERN_INFO "%s payload size", __func__);
+		WARN_ON(1);
+		return -EINVAL;
+	}
+
+	sock = sockfd_lookup(payload->fd, &r);
+
+	if (!sock)
+		return -ENOTSOCK;
+
+	if (sock->sk->sk_type != SOCK_STREAM)
+		return -ESOCKTNOSUPPORT;
+
+	if (sock->sk->sk_family != AF_INET &&
+	    sock->sk->sk_family != AF_INET6)
+		return -EPFNOSUPPORT;
+
+	ksmbd_tcp_new_connection(sock);
+
 	return handle_response(type, payload, sz);
 }
 
