@@ -382,11 +382,13 @@ int ksmbd_conn_transport_init(void)
 	int ret;
 
 	mutex_lock(&init_lock);
+#if 0
 	ret = ksmbd_tcp_init();
 	if (ret) {
 		pr_err("Failed to init TCP subsystem: %d\n", ret);
 		goto out;
 	}
+#endif
 
 	ret = ksmbd_rdma_init();
 	if (ret) {
